@@ -1,0 +1,6 @@
+<div class="input-group {% if widget.prefix and widget.suffix %}presuffix{% else %}{% if widget.prefix %}prefix{% endif %}{% if widget.suffix %}suffix{% endif %}{% endif %}">
+    {% if widget.prefix %}<span class="input-group-addon prefix"><b>{{ widget.prefix }}</b></span>{% endif %}
+    {% include "django/forms/widgets/input.html" %}
+    {% if widget.suffix %}<span class="input-group-addon suffix"><b>{{ widget.suffix }}</b></span>{% endif %}
+</div>
+

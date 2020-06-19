@@ -1,0 +1,20 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+
+    {% if original.admin_get_previous %}
+        <li><a href="{% url 'admin:index' %}{{ app_label }}/{{ opts.model_name }}/{{ original.admin_get_previous.pk }}/change" class="historylink">
+            « Previous {{ opts.verbose_name|capfirst }}
+        </a></li>
+    {% endif %}
+
+    {% if original.admin_get_next %}
+        <li><a href="{% url 'admin:index' %}{{ app_label }}/{{ opts.model_name }}/{{ original.admin_get_next.pk }}/change" class="historylink">
+            Next {{ opts.verbose_name|capfirst }} »
+        </a></li>
+    {% endif %}
+
+    {{ block.super }}
+
+{% endblock %}
+
