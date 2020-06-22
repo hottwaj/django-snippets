@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.db.models import Model
-from simple_history.admin import SimpleHistoryAdmin
 
 from import_export.resources import ModelResource as ImportExportModelResource
 
@@ -55,47 +54,49 @@ class FormattedListDisplayMixin:
         self.list_display = all_fields
         super().__init__(model, *args, **kwargs)
 
+def get_package_models(models_package, model_filter_fn = None, include_abstract = False):
+    models_list = []
+    for k, obj in models_package.__dict__.items():
+        if isinstance(obj, type) and issubclass(obj, Model) and obj.__module__ == models_package.__name__:
+            ModelCls = obj
+            if not ModelCls._meta.abstract or include_abstract:
+                if model_filter_fn is None or model_filter_fn(ModelCls):
+                    models_list.append(ModelCls)
+                    
+    return models_list
+
 #building ModelAdmin classes is repetitive, tedious and quickly becomes difficult to maintain
 #I've automated the process of building them here
 
-def build_admin_models(models_package):
+def build_admin_models(models_list, extra_mixins = {}, default_base_admin_cls = admin.ModelAdmin):
     #admin_models_dict can be used later to get a specific Admin model if ever needed
     #e.g. admin_models_dict[SecuritisationNote]
     admin_models_dict = {}   
 
-    for k, obj in models_package.__dict__.items():
-        if isinstance(obj, type) and issubclass(obj, Model) and obj.__module__ == models_package.__name__:
-            ModelCls = obj
-            if not ModelCls._meta.abstract and not ModelCls.__name__.startswith('Historical'):
+    for ModelCls in models_list:
+        #needed for Excel export via django_import_export
+        class ExcelResource(ImportExportModelResource):
+            class Meta:
+                model = ModelCls
 
-                #needed for Excel export via django_import_export
-                class ExcelResource(ImportExportModelResource):
-                    class Meta:
-                        model = ModelCls
+        admin_bases = [ExportMixin]
 
-                admin_bases = [ExportMixin]
+        #look for "AdminMixin" on the ModelCls and its base classes, and if present use it as a base class for the ModelAdminCls
+        #this allows us to specify all the Admin stuff on ModelCls, rather than repeating everything and splitting it
+        #onto a custom ModelAdminCls
+        for BaseModelCls in ModelCls.__bases__ + (ModelCls,):
+            admin_mixin = getattr(BaseModelCls, 'AdminMixin', extra_mixins.get(BaseModelCls, None))
+            if admin_mixin is not None:
+                admin_bases.append(admin_mixin)
 
-                #look for "AdminMixin" on the ModelCls and its base classes, and if present use it as a base class for the ModelAdminCls
-                #this allows us to specify all the Admin stuff on ModelCls, rather than repeating everything and splitting it
-                #onto a custom ModelAdminCls
-                for BaseModelCls in ModelCls.__bases__ + (ModelCls,):
-                    admin_mixin = getattr(BaseModelCls, 'AdminMixin', None)
-                    if admin_mixin is not None:
-                        admin_bases.append(admin_mixin)
+        admin_bases.extend([FormattedListDisplayMixin, PrefixSuffixAdminCSSMixin, default_base_admin_cls])
+        class ModelAdminCls(*admin_bases):
+            resource_class = ExcelResource
 
-                admin_bases.extend([FormattedListDisplayMixin, PrefixSuffixAdminCSSMixin])
+        admin.site.register(ModelCls, ModelAdminCls)
 
-                #if ModelCls is abs_data_models.SecuritisationNote:
-                #    admin_bases.append(ClonableModelAdmin)
-
-                admin_bases.append(SimpleHistoryAdmin)
-                class ModelAdminCls(*admin_bases):
-                    resource_class = ExcelResource
-
-                admin.site.register(ModelCls, ModelAdminCls)
-
-                admin_models_dict[ModelCls] = ModelAdminCls
-                ModelCls.ModelAdminCls = ModelAdminCls
+        admin_models_dict[ModelCls] = ModelAdminCls
+        ModelCls.ModelAdminCls = ModelAdminCls
             
     return admin_models_dict
                 

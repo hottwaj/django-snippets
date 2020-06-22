@@ -1,4 +1,4 @@
-# django-nuggets
+# django-boilerplate
 
 Django app containing a few useful snippets and tools for reducing boilerplate code:
 
