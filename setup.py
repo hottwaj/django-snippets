@@ -8,14 +8,14 @@ with open(path.join(here, 'README.md')) as f:
     long_description = f.read()
 
 setup(
-    name='django-boilerplate',
+    name='django-snippets',
 
     version='1.0',
 
-    description='Django tools for reducing boilerplate code',
+    description='Useful Django snippets, and tools for reducing boilerplate',
     long_description=long_description,
 
-    url='https://github.com/hottwaj/django-boilerplate',
+    url='https://github.com/hottwaj/django-snippets',
 
     author='Jonathan Clarke',
     author_email='jonathan.a.clarke@gmail.com',
@@ -27,8 +27,10 @@ setup(
 
     keywords='',
 
-    packages=["django_boilerplate"],
+    packages=["django_snippets"],
     
     install_requires=[
+        "django>=2.2",
+        "django-import-export>=2.0",
     ],
 )

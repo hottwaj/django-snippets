@@ -1,4 +1,4 @@
-# django-boilerplate
+# django-snippets
 
 Django app containing a few useful snippets and tools for reducing boilerplate code:
 
@@ -15,6 +15,14 @@ Django app containing a few useful snippets and tools for reducing boilerplate c
   - an AddedByMixin
   - a UniqueNameModel
   
+- urls:
+  - model instance to admin changeform url 
+  
+- widgets:
+  - read only value/foreign key widgets
+  
+- forms:
+  - workaround for ensuring "extra" fields on a ModelForm are preserved in "initial" when using modelformset_factory
   
 
 

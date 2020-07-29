@@ -3,9 +3,11 @@ from django.db.models import FloatField
 from django.forms import FloatField as FloatFormField
 
 class PrefixSuffixAdminCSSMixin:
-    # Mixin for ModelAdmin classes 
-    # css is based on the example here: https://codepen.io/chamsi/pen/LavooJ
-    # This Mixin class is included automatically in admin.py
+    """
+    Mixin for ModelAdmin classes that adds CSS needed for Input Prefix/Suffix (if needed)
+    css is based on the example here: https://codepen.io/chamsi/pen/LavooJ
+    This Mixin class is included automatically if you use `build_admin_models` in admin.py
+    """
     
     class Media:
         css = {
@@ -13,11 +15,16 @@ class PrefixSuffixAdminCSSMixin:
         }
         
 class PrefixSuffixInput(NumberInput):
-    # Input widget with prefix/suffix box displayed in admin change form
-    # set either/both of `widget_suffix` or widget_prefix on subclasses to get a prefix to appear
-    # e.g.
-    # widget_suffix = '%'
-    # widget_prefix = '€'
+    """
+    Input widget with prefix/suffix box displayed in admin change form
+    set either/both of `widget_suffix` or `widget_prefix` as an attribute on subclasses to get a prefix to appear
+    e.g.
+    class MyInput(PrefixSuffixInput):
+        widget_prefix = '£'
+        widget_suffix = 'p'
+        
+    see PercentInput as an example
+    """
     
     template_name = 'widgets/prefix_suffix_input.html'
 
@@ -37,7 +44,9 @@ class PercentInput(PrefixSuffixInput):
         return super().format_value(value*100)
 
 class PercentFormField(FloatFormField):
-    # FormField for PercentField
+    """
+    FormField for PercentField
+    """
     widget = PercentInput
     
     def to_python(self, value):
@@ -52,7 +61,9 @@ class PercentFormField(FloatFormField):
                 return None
 
 class PercentField(FloatField):
-    # A FloatField that translates between percentages entered by users on the 0-100% scale that are stored on the 0-1.0 scale
+    """
+    A FloatField that translates between percentages entered by users on the 0-100% scale that are stored on the 0-1.0 scale
+    """
     
     def formfield(self, **kwargs):
         #override the formfield for this class unless specified in kwargs

@@ -1,11 +1,13 @@
 from django.db.models import Model, ForeignKey, CharField, DateTimeField, CASCADE, DO_NOTHING
 from django.conf import settings
 
-#use ForeignKey_CD rather than ForeignKey directly to make all foreign keys cascade delete.  
 def ForeignKey_CD(*args, **kwargs):
+    "A hacky shortcut for on_delete=CASCADE"
     return ForeignKey(*args, on_delete = CASCADE, **kwargs)
 
 class NextPreviousMixin(object):
+    """Adds Next/Previous buttons to the Admin ChangeForm
+    Should be used as a mixin to a Model."""
     def _get_next_or_prev(self, gt_or_lt):
         cached_field = '_cachednext_or_prev_' + gt_or_lt
         order_by = {'gt': 'pk', 'lt': '-pk'}[gt_or_lt]
@@ -26,7 +28,7 @@ class NextPreviousMixin(object):
         return self._get_next_or_prev('lt')
     
 class AtLeastOneNotNullMixin(object):
-    """Mixin class that overrides default django form "clean" method to ensure that at least one of several fields is not NULL (or False)
+    """Model Mixin class that overrides default django form "clean" method to ensure that at least one of several fields is not NULL (or False)
     
     Fields that are checked should be set in a class attribute "joint_not_nulls" on the model as a list of lists containing fields to check
     
@@ -48,6 +50,7 @@ class AtLeastOneNotNullMixin(object):
                 raise ValidationError('At least one of the following must be provided: %s' % ', '.join(fields))
                 
 class AddedByMixin(Model):
+    "Abstract Model base class that provides added_by/date_added fields"
     added_by = ForeignKey(settings.AUTH_USER_MODEL, blank=True, on_delete=DO_NOTHING)
     date_added = DateTimeField(auto_now_add=True)
 
@@ -69,7 +72,10 @@ class AddedByMixin(Model):
 DefaultModelBases = (Model, NextPreviousMixin)
 
 class UniqueNameModel(*DefaultModelBases):
-    #template for a basic model that has a name
+    """
+    Django Model abstract base class for a basic model that has a unique name
+    """
+    
     name = CharField(max_length=255, unique=True, help_text="The unique name of this object")
     
     def __str__(self):
