@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md')) as f:
 setup(
     name='django-snippets',
 
-    version='1.0',
+    version='0.1',
 
     description='Useful Django snippets, and tools for reducing boilerplate',
     long_description=long_description,

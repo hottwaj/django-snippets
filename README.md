@@ -24,5 +24,7 @@ Django app containing a few useful snippets and tools for reducing boilerplate c
 - forms:
   - workaround for ensuring "extra" fields on a ModelForm are preserved in "initial" when using modelformset_factory
   
+Note that "django-snippets" should be included in your Django project's "INSTALLED_APPS"
+  
 
 
