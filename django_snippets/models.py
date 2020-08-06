@@ -4,28 +4,6 @@ from django.conf import settings
 def ForeignKey_CD(*args, **kwargs):
     "A hacky shortcut for on_delete=CASCADE"
     return ForeignKey(*args, on_delete = CASCADE, **kwargs)
-
-class NextPreviousMixin(object):
-    """Adds Next/Previous buttons to the Admin ChangeForm
-    Should be used as a mixin to a Model."""
-    def _get_next_or_prev(self, gt_or_lt):
-        cached_field = '_cachednext_or_prev_' + gt_or_lt
-        order_by = {'gt': 'pk', 'lt': '-pk'}[gt_or_lt]
-        try:
-            return getattr(self, cached_field)
-        except AttributeError:
-            try:
-                filter_kwargs = {'pk__' + gt_or_lt: self.pk}
-                setattr(self, cached_field, self.__class__.objects.filter(**filter_kwargs).order_by(order_by)[0])
-            except IndexError:
-                setattr(self, cached_field, None)
-        return getattr(self, cached_field)   
-
-    def admin_get_next(self):
-        return self._get_next_or_prev('gt')
-    
-    def admin_get_previous(self):
-        return self._get_next_or_prev('lt')
     
 class AtLeastOneNotNullMixin(object):
     """Model Mixin class that overrides default django form "clean" method to ensure that at least one of several fields is not NULL (or False)
@@ -69,7 +47,7 @@ class AddedByMixin(Model):
         abstract = True
         
 #a custom model base list, can be used like this: `class MyModel(*DefaultModelBases): pass`
-DefaultModelBases = (Model, NextPreviousMixin)
+DefaultModelBases = (Model, )
 
 class UniqueNameModel(*DefaultModelBases):
     """

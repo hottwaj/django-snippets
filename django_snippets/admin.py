@@ -5,7 +5,31 @@ from import_export.resources import ModelResource as ImportExportModelResource
 from import_export.admin import ExportMixin
 
 from .fields import PrefixSuffixAdminCSSMixin
+from .urls import url_to_admin_changeform
 
+class NextPreviousAdminMixin: 
+    """
+    Adds a Next/Previous object instance link to each Admin Change Form
+    See templates/admin/change_form.html"""
+    
+    def render_change_form(self, request, context, obj=None, **kwargs):
+        context.update({
+            'admin_next_instance_href': self.get_next_or_prev_instance(obj, 'gt'),
+            'admin_prev_instance_href': self.get_next_or_prev_instance(obj, 'lt'),
+        })
+        return super().render_change_form(request, context, obj=None, **kwargs)
+    
+    def get_next_or_prev_instance(self, obj, gt_or_lt):
+        order_by = {'gt': 'pk', 'lt': '-pk'}[gt_or_lt]
+        try:
+            filter_kwargs = {'pk__' + gt_or_lt: obj.pk}
+            other_obj = obj.__class__.objects.filter(**filter_kwargs).order_by(order_by)[0]
+        except IndexError:
+            obj_link = None
+        else:
+            obj_link = url_to_admin_changeform(other_obj)
+        return obj_link
+    
 class FormattedListDisplayMixin:
     """
     Mixin to allow tuples specifying formats to be used in Admin list_display
@@ -102,7 +126,7 @@ def build_admin_models(models_list, extra_mixins = {}, default_base_admin_cls = 
             if admin_mixin is not None and admin_mixin not in admin_bases:
                 admin_bases.append(admin_mixin)
 
-        admin_bases.extend([FormattedListDisplayMixin, PrefixSuffixAdminCSSMixin, default_base_admin_cls])
+        admin_bases.extend([FormattedListDisplayMixin, PrefixSuffixAdminCSSMixin, NextPreviousAdminMixin, default_base_admin_cls])
         class ModelAdminCls(*admin_bases):
             resource_class = ExcelResource
 

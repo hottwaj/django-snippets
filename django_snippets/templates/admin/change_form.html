@@ -2,14 +2,15 @@
 
 {% block object-tools-items %}
 
-    {% if original.admin_get_previous %}
-        <li><a href="{% url 'admin:index' %}{{ app_label }}/{{ opts.model_name }}/{{ original.admin_get_previous.pk }}/change" class="historylink">
+    {% if admin_next_instance_href %}
+        <li><a href="{{ admin_next_instance_href }}" class="historylink">
             « Previous {{ opts.verbose_name|capfirst }}
         </a></li>
+
     {% endif %}
 
-    {% if original.admin_get_next %}
-        <li><a href="{% url 'admin:index' %}{{ app_label }}/{{ opts.model_name }}/{{ original.admin_get_next.pk }}/change" class="historylink">
+    {% if admin_prev_instance_href %}
+        <li><a href="{{ admin_prev_instance_href }}" class="historylink">
             Next {{ opts.verbose_name|capfirst }} »
         </a></li>
     {% endif %}
