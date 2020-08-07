@@ -20,6 +20,8 @@ class NextPreviousAdminMixin:
         return super().render_change_form(request, context, obj=None, **kwargs)
     
     def get_next_or_prev_instance(self, obj, gt_or_lt):
+        if obj is None: #e.g. when creating a new object via admin panel
+            return None
         order_by = {'gt': 'pk', 'lt': '-pk'}[gt_or_lt]
         try:
             filter_kwargs = {'pk__' + gt_or_lt: obj.pk}
