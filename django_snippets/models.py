@@ -17,7 +17,7 @@ class GetOrCreateWChecksManager(Manager):
                     different_fields[k] = (v, existing_v)
 
             if different_fields:
-                raise DataConsistencyError('New row for {:} with key {:} differs from data in database on fields:\n'
+                raise DataConsistencyError('New row for {:} with key {:} differs from data in database on fields:\n{:}'
                                            .format(self.model.__name__, str(key), str(different_fields)))
 
         return existing, created
