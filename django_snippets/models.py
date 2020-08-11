@@ -1,8 +1,36 @@
-from django.db.models import Model, ForeignKey, CharField, DateTimeField, CASCADE, DO_NOTHING
+from django.db.models import Model, Manager, ForeignKey, CharField, DateTimeField, CASCADE, DO_NOTHING
 from django.conf import settings
 
+class DataConsistencyError(RuntimeError): pass
+
+class GetOrCreateWChecksManager(Manager):
+    "Manager class that provides `get_or_create_with_checks()`"
+        
+    def get_or_create_with_checks(self, non_key_values = {}, **key):
+        """Same as `Model.objects.get_or_create()`, but also checks if `non_key_values` match those in the database if the object already exists."""
+        existing, created = self.get_or_create(**key, defaults = non_key_values)
+        if not created:
+            different_fields = {}
+            for k, v in non_key_values.items():
+                existing_v = getattr(existing, k)
+                if v != existing_v:
+                    different_fields[k] = (v, existing_v)
+
+            if different_fields:
+                raise DataConsistencyError('New row for {:} with key {:} differs from data in database on fields:\n'
+                                           .format(self.model.__name__, str(key), str(different_fields)))
+
+        return existing, created
+
+class ModelWChecksManager(Model):
+    "Abstract Manager class that uses GetOrCreateWChecksManager Manager so that `get_or_create_with_checks()` is available by default"
+    objects = GetOrCreateWChecksManager()
+    
+    class Meta:
+        abstract = True
+
 def ForeignKey_CD(*args, **kwargs):
-    "A hacky shortcut for on_delete=CASCADE"
+    "A shortcut for on_delete=CASCADE"
     return ForeignKey(*args, on_delete = CASCADE, **kwargs)
     
 class AtLeastOneNotNullMixin(object):
@@ -47,7 +75,7 @@ class AddedByMixin(Model):
         abstract = True
         
 #a custom model base list, can be used like this: `class MyModel(*DefaultModelBases): pass`
-DefaultModelBases = (Model, )
+DefaultModelBases = (ModelWChecksManager, )
 
 class UniqueNameModel(*DefaultModelBases):
     """

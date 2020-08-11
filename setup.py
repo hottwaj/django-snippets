@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md')) as f:
 setup(
     name='django-snippets',
 
-    version='0.3',
+    version='0.4',
     
     python_requires='>3.7',
 
@@ -30,9 +30,10 @@ setup(
     keywords='',
 
     packages=["django_snippets"],
+    include_package_data=True,
     
     install_requires=[
-        "django>=2.2",
+        "django>=3.1",
         "django-import-export>=2.0",
     ],
 )
