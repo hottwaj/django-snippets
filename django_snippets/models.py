@@ -3,11 +3,40 @@ from django.conf import settings
 
 class DataConsistencyError(RuntimeError): pass
 
+def instance_to_dict(instance):
+    # see https://stackoverflow.com/questions/21925671/convert-django-model-object-to-dict-with-all-of-the-fields-intact
+    opts = instance._meta
+    data = {}
+    for f in opts.concrete_fields:
+        data[f.name] = getattr(instance, f.name)
+    return data
+
+def get_nk_fields(model_or_instance):
+    if hasattr(model_or_instance, 'get_natural_key_fields'):
+        return model_or_instance.get_natural_key_fields()
+    else:
+        model_cls = model_or_instance if isinstance(model_or_instance, type) else model_or_instance.__class__
+        raise ValueError('Model "%s" does not provide a get_natural_key_fields() method'
+                         % model_cls.__name__)
+    
 class GetOrCreateWChecksManager(Manager):
     "Manager class that provides `get_or_create_with_checks()`"
         
-    def get_or_create_with_checks(self, non_key_values = {}, **key):
-        """Same as `Model.objects.get_or_create()`, but also checks if `non_key_values` match those in the database if the object already exists."""
+    def get_or_create_with_checks(self, non_key_values = {}, instance = None, key_fields = None, **key):
+        """Same as `Model.objects.get_or_create()`, but also checks if `non_key_values` match those in the database if the object already exists.  
+        
+Either i) 'non_key_values' and **key, or ii) 'instance' and 'key_fields' should be provided
+(though 'key_fields' can be omitted if the underlying Model implements 'get_natural_key_fields')."""
+        if instance is not None:
+            inst_dict = instance_to_dict(instance)
+            if key_fields:
+                key = {k: inst_dict[k] for k in key_fields}
+            else:
+                key = {k: inst_dict[k] for k in get_nk_fields(instance)}
+            non_key_values = {k: inst_dict[k]
+                              for k in inst_dict
+                              if k not in key and k not in ['_foreign_key_cache', '_state']}
+            
         existing, created = self.get_or_create(**key, defaults = non_key_values)
         if not created:
             different_fields = {}
@@ -21,7 +50,13 @@ class GetOrCreateWChecksManager(Manager):
                                            .format(self.model.__name__, str(key), str(different_fields)))
 
         return existing, created
-
+    
+    def get_by_natural_key(self, *args):
+        return self.get(**dict(zip(get_nk_fields(self.model), args)))
+            
+    def get_or_create_by_natural_key(self, *args):
+        return self.get_or_create(**dict(zip(get_nk_fields(self.model), args)))
+            
 class ModelWChecksManager(Model):
     "Abstract Manager class that uses GetOrCreateWChecksManager Manager so that `get_or_create_with_checks()` is available by default"
     objects = GetOrCreateWChecksManager()
@@ -87,6 +122,13 @@ class UniqueNameModel(*DefaultModelBases):
     def __str__(self):
         return self.name
 
+    def natural_key(self):
+        return (self.name,)
+    
+    @classmethod
+    def get_natural_key_fields(self):
+        return ('name',)
+    
     class Meta:
         ordering = ('name',)
         abstract = True
