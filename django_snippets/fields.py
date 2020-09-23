@@ -41,7 +41,11 @@ class PercentInput(PrefixSuffixInput):
         # Return a value as it should appear when rendered in a form template (i.e. scale stored value by 100 for display)
         if value == '' or value is None:
             return None
-        return super().format_value(value*100)
+        if isinstance(value, str):
+            # values in failed django forms are str rather than float and do not need scaling
+            return super().format_value(float(value))
+        else:
+            return super().format_value(float(value)*100)
 
 class PercentFormField(FloatFormField):
     """
