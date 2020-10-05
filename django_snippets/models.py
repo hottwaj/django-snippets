@@ -22,7 +22,7 @@ def get_nk_fields(model_or_instance):
 class GetOrCreateWChecksManager(Manager):
     "Manager class that provides `get_or_create_with_checks()`"
         
-    def get_or_create_with_checks(self, non_key_values = {}, instance = None, key_fields = None, **key):
+    def get_or_create_with_checks(self, non_key_values = {}, skip_checks = [], instance = None, key_fields = None, **key):
         """Same as `Model.objects.get_or_create()`, but also checks if `non_key_values` match those in the database if the object already exists.  
         
 Either i) 'non_key_values' and **key, or ii) 'instance' and 'key_fields' should be provided
@@ -37,13 +37,16 @@ Either i) 'non_key_values' and **key, or ii) 'instance' and 'key_fields' should 
                               for k in inst_dict
                               if k not in key and k not in ['_foreign_key_cache', '_state']}
             
+            skip_checks.append(instance._meta.pk.name)
+            
         existing, created = self.get_or_create(**key, defaults = non_key_values)
         if not created:
             different_fields = {}
             for k, v in non_key_values.items():
-                existing_v = getattr(existing, k)
-                if v != existing_v:
-                    different_fields[k] = (v, existing_v)
+                if k not in skip_checks:
+                    existing_v = getattr(existing, k)
+                    if v != existing_v:
+                        different_fields[k] = (v, existing_v)
 
             if different_fields:
                 raise DataConsistencyError('New row for {:} with key {:} differs from data in database on fields:\n{:}'
