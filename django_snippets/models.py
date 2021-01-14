@@ -19,6 +19,18 @@ def get_nk_fields(model_or_instance):
         raise ValueError('Model "%s" does not provide a get_natural_key_fields() method'
                          % model_cls.__name__)
     
+def get_package_models(models_package, model_filter_fn = None, include_abstract = False):
+    """Return all the Django Models present in a particular module"""
+    models_list = []
+    for k, obj in models_package.__dict__.items():
+        if isinstance(obj, type) and issubclass(obj, Model) and obj.__module__ == models_package.__name__:
+            ModelCls = obj
+            if not ModelCls._meta.abstract or include_abstract:
+                if model_filter_fn is None or model_filter_fn(ModelCls):
+                    models_list.append(ModelCls)
+                    
+    return models_list
+
 class GetOrCreateWChecksManager(Manager):
     "Manager class that provides `get_or_create_with_checks()`"
         

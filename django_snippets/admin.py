@@ -88,18 +88,6 @@ def process_formatted_list_display(list_display, cls = None):
             all_fields.append(f)
     return all_fields
 
-def get_package_models(models_package, model_filter_fn = None, include_abstract = False):
-    """Return all the Django Models present in a particular module"""
-    models_list = []
-    for k, obj in models_package.__dict__.items():
-        if isinstance(obj, type) and issubclass(obj, Model) and obj.__module__ == models_package.__name__:
-            ModelCls = obj
-            if not ModelCls._meta.abstract or include_abstract:
-                if model_filter_fn is None or model_filter_fn(ModelCls):
-                    models_list.append(ModelCls)
-                    
-    return models_list
-
 def build_admin_models(models_list, extra_mixins = {}, default_base_admin_cls = admin.ModelAdmin):
     """
     Automates the process of building ModelAdmin classes with a default set of base classes.

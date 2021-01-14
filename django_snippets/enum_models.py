@@ -15,8 +15,7 @@ from django.db.models import Model
 from django.utils.functional import classproperty
 from functools import partial
 
-from django_snippets.models import get_nk_fields
-from django_snippets.admin import get_package_models
+from django_snippets.models import get_nk_fields, get_package_models
 
 def _enum_cached_get_fn(cls, instance_name, key, *args, **kwargs):
     """Fetch a model instance from the DB, and store it on cls as instance_name.
