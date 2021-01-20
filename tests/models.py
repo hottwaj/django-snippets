@@ -9,7 +9,7 @@ class NamedCompany(UniqueNameModel): pass
 
 class ObjectWithStatus(ObservedModel, UniqueNameModel): pass
 
-class TestStatusModel(*DefaultModelBases, StatusModel):
+class StatusTestModel(StatusModel):
     OBSERVED_MODEL = ObjectWithStatus
     
     status_value = IntegerField()
