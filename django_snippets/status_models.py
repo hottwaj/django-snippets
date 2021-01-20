@@ -56,6 +56,15 @@ class StatusModelMetaclass(ModelBase):
             else:
                 return super().__new__(cls, name, bases, attrs)
 
+class StatusModelQuerySet(QuerySet):
+    def filter_status_as_of(self, status_date: datetime.date) -> QuerySet:
+        """Filter this queryset to select status objects as of status_date."""
+        return self.model._filter_queryset_status_as_of(self, status_date)
+
+    def get_status_as_of(self, observed_obj: self.model, status_date: datetime.date) -> StatusModel:
+        "Get status of observed_obj as of status_date"
+        return self.filter_status_as_of(status_date).get(observed_obj = observed_obj)
+
 class StatusModel(Model, metaclass=StatusModelMetaclass):
     applies_from = DateField(help_text = "Status valid from this date")
     applies_to = DateField(help_text = "Status valid up to *day before* this date", null=True, blank=True)
@@ -120,13 +129,4 @@ class StatusModel(Model, metaclass=StatusModelMetaclass):
             new_status.observed_obj.current_status = new_status
             new_status.observed_obj.save()
 
-    class StatusModelQueryset(QuerySet):
-        def filter_status_as_of(self, status_date: datetime.date) -> QuerySet:
-            """Filter this queryset to select status objects as of status_date."""
-            return self.model._filter_queryset_status_as_of(self, status_date)
-
-        def get_status_as_of(self, observed_obj: self.model, status_date: datetime.date) -> StatusModel:
-            "Get status of observed_obj as of status_date"
-            return self.filter_status_as_of(status_date).get(observed_obj = observed_obj)
-
-    objects = StatusModelQueryset.as_manager()
+    objects = StatusModelQuerySet.as_manager()

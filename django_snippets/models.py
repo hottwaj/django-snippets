@@ -1,4 +1,4 @@
-from django.db.models import Model, Manager, ForeignKey, CharField, DateTimeField, CASCADE, DO_NOTHING
+from django.db.models import Model, QuerySet, Manager, ForeignKey, CharField, DateTimeField, CASCADE, DO_NOTHING
 from django.conf import settings
 
 class DataConsistencyError(RuntimeError): pass
@@ -31,8 +31,8 @@ def get_package_models(models_package, model_filter_fn = None, include_abstract 
                     
     return models_list
 
-class GetOrCreateWChecksManager(Manager):
-    "Manager class that provides `get_or_create_with_checks()`"
+class GetOrCreateChecksQuerySet(QuerySet):
+    "QuerySet class that provides `get_or_create_with_checks()`"
         
     def get_or_create_with_checks(self, non_key_values = {}, skip_checks = [], instance = None, key_fields = None, **key):
         """Same as `Model.objects.get_or_create()`, but also checks if `non_key_values` match those in the database if the object already exists.  
@@ -73,8 +73,8 @@ Either i) 'non_key_values' and **key, or ii) 'instance' and 'key_fields' should 
         return self.get_or_create(**dict(zip(get_nk_fields(self.model), args)))
             
 class ModelWChecksManager(Model):
-    "Abstract Manager class that uses GetOrCreateWChecksManager Manager so that `get_or_create_with_checks()` is available by default"
-    objects = GetOrCreateWChecksManager()
+    "Abstract Model class that uses GetOrCreateChecksQuerySet as a Manager so that `get_or_create_with_checks()` is available by default"
+    objects = GetOrCreateChecksQuerySet.as_manager()
     
     class Meta:
         abstract = True
