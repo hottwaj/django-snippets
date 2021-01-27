@@ -8,52 +8,56 @@ from .models import *
 from django.db.models import Q
 
 class StatusModelsTestCase(TestCase):
-    models = [ObjectWithStatus, StatusTestModel]
+    observed_cls = ObjectWithStatus
+    status_cls = StatusTestModel
     
     def get_or_create_obj_w_status(self, name):
-        obj, created = ObjectWithStatus.objects.get_or_create(name = name)
+        obj, created = self.observed_cls.objects.get_or_create(name = name)
         return obj
 
     @property
     def base_obj(self):
-        return self.get_or_create_obj_w_status('Test Intermediary')
+        return self.get_or_create_obj_w_status('Test Object')
+
+    def init_status_instance(self, observed_obj, **kwargs):
+        return self.status_cls(observed_obj = observed_obj, **kwargs)
     
     def add_initial_status(self):
-        status = StatusTestModel(observed_obj = self.base_obj,
+        status = self.init_status_instance(self.base_obj,
                              applies_from = datetime.date(2020, 1, 1),
                              applies_to = None,
                              status_value = 10)
         
-        StatusTestModel.add_status(status)
+        self.status_cls.add_status(status)
         return status
     
     def test_add_initial_status(self):
         status = self.add_initial_status()
         self.assertIsNotNone(status.pk)
         self.assertEqual(self.base_obj.current_status.pk, status.pk)
-        self.assertEqual(StatusTestModel.objects.count(), 1)
+        self.assertEqual(self.status_cls.objects.count(), 1)
         
     def test_add_status_with_not_null_to_date_fails(self):
-        status = StatusTestModel(observed_obj = self.base_obj,
+        status = self.init_status_instance(self.base_obj,
                              applies_from = datetime.date(2020, 1, 1),
                              applies_to = datetime.date(2020, 1, 5),
                              status_value = 10)
         
         with self.assertRaises(StatusCreationError):
-            StatusTestModel.add_status(status)
+            self.status_cls.add_status(status)
             
-        self.assertEqual(StatusTestModel.objects.count(), 0)
+        self.assertEqual(self.status_cls.objects.count(), 0)
             
     def add_initial_and_subsequent_status(self, subsequent_status_days_gap = 31):
         status_1 = self.add_initial_status()
         
-        status_2 = StatusTestModel(observed_obj = self.base_obj,
+        status_2 = self.init_status_instance(self.base_obj,
                                applies_from = status_1.applies_from + datetime.timedelta(days = subsequent_status_days_gap),
                                applies_to = None,
                                status_value = 20)
         
-        StatusTestModel.add_status(status_2)
-        status_1 = StatusTestModel.objects.get(pk = status_1.pk) # re-fetch
+        self.status_cls.add_status(status_2)
+        status_1 = self.status_cls.objects.get(pk = status_1.pk) # re-fetch
         return status_1, status_2
         
     def test_add_subsequent_status(self):
@@ -61,56 +65,56 @@ class StatusModelsTestCase(TestCase):
         
         self.assertIsNotNone(status_2.pk)
         self.assertEqual(self.base_obj.current_status.pk, status_2.pk)
-        self.assertEqual(StatusTestModel.objects.count(), 2)
+        self.assertEqual(self.status_cls.objects.count(), 2)
         self.assertEqual(status_1.applies_to, status_2.applies_from)
         
     def test_overwrite_first_status(self):
         status_1 = self.add_initial_status()
         
-        status_2 = StatusTestModel(observed_obj = self.base_obj,
+        status_2 = self.init_status_instance(self.base_obj,
                                applies_from = status_1.applies_from,
                                applies_to = None,
                                status_value = 20)
         
-        StatusTestModel.add_status(status_2)
+        self.status_cls.add_status(status_2)
         
         self.assertIsNotNone(status_2.pk)
         self.assertEqual(self.base_obj.current_status.pk, status_2.pk)
-        self.assertEqual(StatusTestModel.objects.count(), 1)
-        with self.assertRaises(StatusTestModel.DoesNotExist):
-            StatusTestModel.objects.get(pk = status_1.pk)
+        self.assertEqual(self.status_cls.objects.count(), 1)
+        with self.assertRaises(self.status_cls.DoesNotExist):
+            self.status_cls.objects.get(pk = status_1.pk)
             
     def test_splitting_terminated_status_fails(self):
         status_1, status_2 = self.add_initial_and_subsequent_status()
         
-        status_3 = StatusTestModel(observed_obj = self.base_obj,
+        status_3 = self.init_status_instance(self.base_obj,
                                applies_from = datetime.date(2020, 1, 10),
                                applies_to = None,
                                status_value = 30)
         
         with self.assertRaises(StatusCreationError):
-            StatusTestModel.add_status(status_3)
+            self.status_cls.add_status(status_3)
         
         self.assertIsNotNone(status_2.pk)
         self.assertEqual(self.base_obj.current_status.pk, status_2.pk)
-        self.assertEqual(set(StatusTestModel.objects.values_list('pk', flat=True)), 
+        self.assertEqual(set(self.status_cls.objects.values_list('pk', flat=True)), 
                          set([status_1.pk, status_2.pk]))
         
     def test_adding_prior_status_fails(self):
         status_1 = self.add_initial_status()
         
-        status_2 = StatusTestModel(observed_obj = self.base_obj,
+        status_2 = self.init_status_instance(self.base_obj,
                                applies_from = datetime.date(2019, 1, 1),
                                applies_to = None,
                                status_value = 20)
         
         with db_transaction.atomic():
             with self.assertRaises(IntegrityError):
-                StatusTestModel.add_status(status_2)
+                self.status_cls.add_status(status_2)
         
         self.assertIsNone(status_2.pk)
         self.assertEqual(self.base_obj.current_status.pk, status_1.pk)
-        self.assertEqual(StatusTestModel.objects.count(), 1)
+        self.assertEqual(self.status_cls.objects.count(), 1)
         
     def test_retrieve_status(self):
         status_1, status_2 = self.add_initial_and_subsequent_status()
@@ -127,7 +131,7 @@ class StatusModelsTestCase(TestCase):
         self.assertEqual(status_2,
                          base_obj.get_status_as_of(status_2.applies_from + datetime.timedelta(days=3650)))
         
-        with self.assertRaises(StatusTestModel.DoesNotExist):
+        with self.assertRaises(self.status_cls.DoesNotExist):
             base_obj.get_status_as_of(status_1.applies_from - datetime.timedelta(days=1))
             
     def test_retrieve_status_one_day_gap(self):
@@ -145,5 +149,12 @@ class StatusModelsTestCase(TestCase):
         self.assertEqual(status_2,
                          base_obj.get_status_as_of(status_2.applies_from + datetime.timedelta(days=3650)))
         
-        with self.assertRaises(StatusTestModel.DoesNotExist):
+        with self.assertRaises(self.status_cls.DoesNotExist):
             base_obj.get_status_as_of(status_1.applies_from - datetime.timedelta(days=1))
+
+class ObservedFkFieldnameTestCase(StatusModelsTestCase):
+    observed_cls = Person
+    status_cls = PersonStatusModel
+
+    def init_status_instance(self, observed_obj, **kwargs):
+        return self.status_cls(person = observed_obj, **kwargs)

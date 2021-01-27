@@ -13,6 +13,12 @@ class StatusTestModel(StatusModel):
     OBSERVED_MODEL = ObjectWithStatus
     
     status_value = IntegerField()
+
+class Person(ObservedModel, UniqueNameModel): pass
+class PersonStatusModel(StatusModel):
+    OBSERVED_MODEL = Person
+    OBSERVED_FK_FIELDNAME = 'person'
+    status_value = IntegerField()
     
 class PizzaBase(UniqueNameModel, EnumModel): 
     class EnumInstances:

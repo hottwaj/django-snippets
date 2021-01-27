@@ -27,25 +27,27 @@ from django.db.models.base import ModelBase
 class StatusModelMetaclass(ModelBase):
     def __new__(cls, name, bases, attrs):
         attrs = {**attrs} # take a copy for safety
+        observed_fk_fieldname = attrs.get('OBSERVED_FK_FIELDNAME', 'observed_obj')
         if 'OBSERVED_MODEL' in attrs:
             observed_model = attrs['OBSERVED_MODEL']
-            attrs['observed_obj'] = ForeignKey_CD(observed_model, related_name = 'historical_status')
+            attrs[observed_fk_fieldname] = ForeignKey_CD(observed_model, related_name = 'historical_status')
+            attrs['OBSERVED_FK_FIELDNAME'] = observed_fk_fieldname
 
             if 'Meta' not in attrs:
                 class Meta: pass
                 attrs['Meta'] = Meta
             metacls = attrs['Meta']
             metacls.unique_together = getattr(metacls, 'unique_together', [])
-            metacls.unique_together.extend([('observed_obj', 'applies_from'),
-                                            ('observed_obj', 'applies_to')])
+            metacls.unique_together.extend([(observed_fk_fieldname, 'applies_from'),
+                                            (observed_fk_fieldname, 'applies_to')])
             
             metacls.constraints = getattr(metacls, 'constraints', [])
             metacls.constraints.extend([
-                UniqueConstraint(fields=['observed_obj'], condition=Q(applies_to__isnull=True), name='%(app_label)s_%(class)s_unique_current_status')
+                UniqueConstraint(fields=[observed_fk_fieldname], condition=Q(applies_to__isnull=True), name='%(app_label)s_%(class)s_unique_current_status')
             ])
             
             newcls = super().__new__(cls, name, bases, attrs)
-            current_status_field = OneToOneField(newcls, on_delete = SET_NULL, related_name = '_observed', null=True, blank=True)
+            current_status_field = OneToOneField(newcls, on_delete = SET_NULL, related_name = '_current_status_for', null=True, blank=True)
             current_status_field.contribute_to_class(observed_model, 'current_status')
             observed_model.STATUS_MODEL = newcls
             return newcls
@@ -61,9 +63,9 @@ class StatusModelQuerySet(QuerySet):
         """Filter this queryset to select status objects as of status_date."""
         return self.model._filter_queryset_status_as_of(self, status_date)
 
-    def get_status_as_of(self, observed_obj: self.model, status_date: datetime.date) -> StatusModel:
+    def get_status_as_of(self, observed_obj: ObservedModel, status_date: datetime.date) -> StatusModel:
         "Get status of observed_obj as of status_date"
-        return self.filter_status_as_of(status_date).get(observed_obj = observed_obj)
+        return self.filter_status_as_of(status_date).get(**{self.model.OBSERVED_FK_FIELDNAME: observed_obj})
 
 class StatusModel(Model, metaclass=StatusModelMetaclass):
     applies_from = DateField(help_text = "Status valid from this date")
@@ -71,9 +73,13 @@ class StatusModel(Model, metaclass=StatusModelMetaclass):
 
     class Meta:
         abstract = True
+
+    def _get_observed_obj(self):
+        return getattr(self, self.OBSERVED_FK_FIELDNAME)
         
     @classmethod
-    def _filter_queryset_status_as_of(cls, queryset: QuerySet, status_date: datetime.date, status_model_path: str = '') -> QuerySet:
+    def _filter_queryset_status_as_of(cls, queryset: QuerySet, status_date: datetime.date, 
+                                      status_model_path: str = '', return_type: Literal(['queryset', 'q_obj']) = 'queryset') -> QuerySet:
         """Filter queryset to select status objects as of status_date.
         
         Can be used on querysets where the base object is not a subclass of StatusModel, 
@@ -81,13 +87,23 @@ class StatusModel(Model, metaclass=StatusModelMetaclass):
         e.g. StatusModel._filter_queryset_status_as_of(queryset = Invoice.objects.all(),
                                                        status_date = selected_date,
                                                        status_object_path = 'historical_status')
+        
+        Rather than filtering the 'queryset', the filter to be applied can be returned by passing return_type='q_obj
+        This can then be combined with other Q objects for more complicated queries (e.g. where the observed object can be null in an FK)
         """
         if status_model_path != '':
             status_model_path += '__' # append this to get to fields of status_obj
-            
-        return queryset.filter(Q(**{status_model_path + 'applies_to__isnull': True})
-                               | Q(**{status_model_path + 'applies_to__gt': status_date}),
-                               **{status_model_path + 'applies_from__lte': status_date})
+
+        q_obj = (Q(**{status_model_path + 'applies_from__lte': status_date})
+                 & (Q(**{status_model_path + 'applies_to__isnull': True})
+                    | Q(**{status_model_path + 'applies_to__gt': status_date})))
+        
+        if return_type == 'queryset':
+            return queryset.filter(q_obj)
+        elif return_type == 'q_obj':
+            return q_obj
+        else:
+            return ValueError('_filter_queryset_status_as_of: return_type must be either "queryset" of "q_obj", but "{')
     
     @classmethod
     def add_status(cls, new_status: StatusModel):
@@ -107,9 +123,10 @@ class StatusModel(Model, metaclass=StatusModelMetaclass):
             if new_status.applies_to is not None:
                 raise StatusCreationError('Inserting a new status with non-blank "applies_to" not yet implemented')
 
+            observed_obj = new_status._get_observed_obj()
             # get current status applicable
             try:
-                prev_status = cls.objects.get_status_as_of(new_status.observed_obj, new_status.applies_from)
+                prev_status = cls.objects.get_status_as_of(observed_obj, new_status.applies_from)
             except cls.DoesNotExist as ex:
                 # this appears to be the first status for this object
                 pass
@@ -126,7 +143,7 @@ class StatusModel(Model, metaclass=StatusModelMetaclass):
                     prev_status.save()
 
             new_status.save()
-            new_status.observed_obj.current_status = new_status
-            new_status.observed_obj.save()
+            observed_obj.current_status = new_status
+            observed_obj.save()
 
     objects = StatusModelQuerySet.as_manager()
