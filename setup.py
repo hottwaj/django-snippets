@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md')) as f:
 setup(
     name='django-snippets',
 
-    version='0.10',
+    version='0.11',
     
     python_requires='>3.7',
 

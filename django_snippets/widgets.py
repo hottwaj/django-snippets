@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.forms import widgets
 
 # ReadOnlyValueWidget and ReadOnlyFKWidget
@@ -39,3 +41,41 @@ class ReadOnlyFKWidget(widgets.Widget):
     def render(self, _, value, attrs=None):
         instance = self.fk_to_model.objects.get(pk = value)
         return "<p>%s</p>" % str(instance)
+
+
+class DateLitepickerInput(widgets.DateInput):
+    template_name = 'widgets/date_litepicker.html'
+
+    def __init__(self, enabled_dates: Optional[list[datetime.date]] = None,
+                       form_submit_on_select = False,
+                       max_date: Optional[datetime.date] = None,
+                       min_date: Optional[datetime.date] = None,
+                       date_format: str = '%Y-%m-%d',
+                       *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enabled_dates = enabled_dates
+        self.form_submit_on_select = form_submit_on_select
+        self.max_date = max_date
+        self.min_date = min_date
+        self.date_format = date_format
+
+    def date_to_str(self, dateval):
+        return dateval.strftime(self.date_format)
+
+    def get_context(self, *args, **kwargs):
+        context = super().get_context(*args, **kwargs)
+        context['enabled_dates'] = str([self.date_to_str(d) for d in self.enabled_dates])
+        context['form_submit_on_select'] = self.form_submit_on_select
+        max_date = (self.max_date
+                    if self.max_date is not None
+                    else max(self.enabled_dates)
+                         if self.enabled_dates
+                         else None)
+        context['max_date'] = self.date_to_str(max_date) if max_date is not None else None
+        min_date = (self.min_date
+                    if self.min_date is not None
+                    else min(self.enabled_dates)
+                         if self.enabled_dates
+                         else None)
+        context['min_date'] = self.date_to_str(min_date) if min_date is not None else None
+        return context

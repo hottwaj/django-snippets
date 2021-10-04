@@ -1,0 +1,27 @@
+{% include "django/forms/widgets/date.html" %}
+
+<script>
+(function () {
+    {% if enabled_dates is not None %}
+        var allowedDates = {{ enabled_dates | safe }};
+        function lockDaysFilterFn(date1, date2, pickedDates) {
+            return !allowedDates.includes(date1.format('YYYY-MM-DD'));
+        }
+    {% else %}
+        var lockDaysFilterFn = null;
+    {% endif %}
+    var picker = new Litepicker({
+        element: document.getElementById('{{ widget.attrs.id }}'),
+        singleMode: true,
+        lockDaysFilter: lockDaysFilterFn,
+        {% if max_date is not None %}maxDate: "{{ max_date }}", {% endif %}
+        {% if min_date is not None %}minDate: "{{ min_date }}", {% endif %}
+    })
+    {% if form_submit_on_select is not None %}
+        .on('selected', function() {
+            picker.triggerElement.form.submit();
+        }
+    {% endif %}
+    );
+}());
+</script>
