@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md')) as f:
 setup(
     name='django-snippets',
 
-    version='0.11',
+    version='0.12',
     
     python_requires='>3.7',
 
@@ -29,7 +29,7 @@ setup(
 
     keywords='',
 
-    packages=["django_snippets"],
+    packages=["django_snippets", "django_snippets.templatetags"],
     include_package_data=True,
     
     install_requires=[
