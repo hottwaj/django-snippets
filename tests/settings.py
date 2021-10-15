@@ -18,3 +18,16 @@ INSTALLED_APPS=[
     "django.contrib.sites",
     "tests",
 ]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_snippets.hierarchical_cache.HierarchicalCache',
+        'OPTIONS': {
+            'CACHE_NAMES': ['locmem1', 'locmem2'],
+        }
+    },
+    'locmem1': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'locmem1',},
+    'locmem2': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'locmem2',},
+}
