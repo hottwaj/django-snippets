@@ -1,5 +1,5 @@
-div.toggle-switch {
-  display: flex;
+span.toggle-switch {
+  display: inline-flex;
   align-items: center;
 }
 
