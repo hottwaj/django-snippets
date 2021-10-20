@@ -79,3 +79,34 @@ class DateLitepickerInput(widgets.DateInput):
                          else None)
         context['min_date'] = self.date_to_str(min_date) if min_date is not None else None
         return context
+
+class ToggleSwitchInput(widgets.CheckboxInput):
+    template_name = 'widgets/toggle-switch.html'
+
+    class Media:
+        css = {
+             'all': ('css/django-snippets/toggle-switch.css',)
+        }
+
+    def __init__(self,
+                 *args,
+                 prefix_label: str = None,
+                 suffix_label: str = None,
+                 off_color = "#478866",
+                 on_color = "#444488",
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.off_color = off_color
+        self.on_color = on_color
+        self.prefix_label = prefix_label
+        self.suffix_label = suffix_label
+
+    def get_context(self, *args, **kwargs):
+        context = super().get_context(*args, **kwargs)
+        context['widget'].update({
+            'off_color': self.off_color,
+            'on_color': self.on_color,
+            'prefix_label': self.prefix_label,
+            'suffix_label': self.suffix_label,
+        })
+        return context

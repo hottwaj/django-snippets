@@ -11,7 +11,7 @@ class PrefixSuffixAdminCSSMixin:
     
     class Media:
         css = {
-             'all': ('css/admin/prefix_suffix_widget.css',)
+             'all': ('css/django-snippets/prefix_suffix_widget.css',)
         }
         
 class PrefixSuffixInput(NumberInput):

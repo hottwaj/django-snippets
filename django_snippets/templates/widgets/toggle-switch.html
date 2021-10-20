@@ -1,0 +1,6 @@
+<div class="toggle-switch">
+  {% if widget.prefix_label %}<label for="{{ widget.attrs.id }}">{{ widget.prefix_label }}</label>{% endif %}
+  {% include "django/forms/widgets/input.html" %}
+  <label for="{{ widget.attrs.id }}" class="switch" style="--off-color: {{ widget.off_color }}; --on-color: {{ widget.on_color }}"></label>
+  {% if widget.suffix_label %}<label for="{{ widget.attrs.id }}">{{ widget.suffix_label }}</label>{% endif %}
+</div>
